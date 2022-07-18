@@ -4,12 +4,21 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    CharacterController cc;
-
+    //CharacterController cc;
+    Rigidbody rb;
+    public Animator animator;
+    public GameManager gm;
+    public RoadGenerator rg;
     Vector3 moveVec, gravity;
 
     float speed = 5;
     float jumpSpeed = 12;
+    float realGravity = -9.8f;
+    public float jumpPower = 15;
+    public float jumpGravity = -40;
+
+    bool isJumping = false;
+    public bool canPlay;
 
     int laneNumber = 1;
     int laneCount = 2;
@@ -18,37 +27,26 @@ public class PlayerMovement : MonoBehaviour
     public float LaneDistance;
     public float SideSpeed;
 
-    bool didChangeLastFrame = false;
+
 
     void Start()
     {
-        cc = GetComponent<CharacterController>();
+        rb = GetComponent<Rigidbody>();
+        animator = GetComponent<Animator>();
         moveVec = new Vector3(1, 0, 0);
         gravity = Vector3.zero;
-
-       // startPosition = transform.position;
         SwipeController.SwipeEvent += CheckInput;
-
+        animator.SetTrigger("Run");
     }
 
-   
     void Update()
     {
-        if (cc.isGrounded)
-        {
-            gravity = Vector3.zero;
+       // rb = GetComponent<Rigidbody>();
+       // animator = GetComponent<Animator>();
 
-            if (Input.GetAxisRaw("Vertical") > 0)
-            {
-                gravity.y = jumpSpeed;
-            }
-        }
-        else
-        {
-            gravity += Physics.gravity * Time.deltaTime * 3;
-        }
+        if(canPlay)
+            moveVec.x = speed;
 
-        moveVec.x = speed;
         moveVec += gravity;
         moveVec *= Time.deltaTime;
 
@@ -56,34 +54,88 @@ public class PlayerMovement : MonoBehaviour
         newPos.x = Mathf.Lerp(newPos.x, FirstLanePos + (laneNumber * LaneDistance), Time.deltaTime * SideSpeed);
         transform.position = newPos;
 
-        cc.Move(moveVec);
     }
 
 
     void CheckInput(SwipeController.SwipeType type)
     {
-
         int sign = 0;
-        /*
-            if (isGrounded() && GM.CanPlay && !isRolling)
-            {
-                if (Input.GetAxisRaw("Vertical") > 0)
-                    wannaJump = true;
-                else if (Input.GetAxisRaw("Vertical") < 0)
-                    StartCoroutine(DoRoll());
-            }
-        */
 
-        if (type == SwipeController.SwipeType.LEFT)
-            sign = 1;
-        else if (type == SwipeController.SwipeType.RIGHT)
-            sign = -1;
-        else
+        if (!canPlay)
             return;
 
+        if (type == SwipeController.SwipeType.LEFT)
+        {
+            sign = 1;
+        }
+        else if (type == SwipeController.SwipeType.RIGHT)
+        {
+            sign = -1;
+        }  
+        else if(type == SwipeController.SwipeType.UP) {
+            animator.SetTrigger("Jump");
+           // animator.SetBool("jump_b", true);
+            Jump();
+        }
+        else
+            
+
+        return;
 
         laneNumber += sign;
         laneNumber = Mathf.Clamp(laneNumber, 0, laneCount);
     }
+
+    void Jump()
+    {
+        // animator.SetBool("jump_b", true);
+        isJumping = true;
+        rb.AddForce(Vector3.up * jumpPower, ForceMode.Impulse);
+        Physics.gravity = new Vector3(0, jumpGravity, 0);
+        StartCoroutine(StopJumpCoroutine());
+
+    }
+    IEnumerator StopJumpCoroutine()
+    {
+        // animator.SetBool("jump_b", false);
+        animator.SetTrigger("Run");
+        do
+        {
+            yield return new WaitForSeconds(0.02f);
+        } while (rb.velocity.y != 0);
+        isJumping = false;
+        Physics.gravity = new Vector3(0, realGravity, 0);
+        
+    }
+
+    public void StartGame()
+    {
+        
+        RoadGenerator.instance.StartLevel();
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Lose")) {
+            rg.speed = 0;
+            animator.SetTrigger("Death");
+            StartCoroutine(Death());
+        }
+        else if (other.CompareTag("Coin"))
+        {
+            gm.AddCoins(1);
+        }
+            
+        // Destroy(other.gameObject);
+    }
+
+    IEnumerator Death()
+    {
+        //animator.SetTrigger("Run");
+        canPlay = false;
+        yield return new WaitForSeconds(1);
+        gm.ShowResult();
+    }
+
 
 }

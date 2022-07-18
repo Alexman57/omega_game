@@ -6,12 +6,14 @@ public class RoadGenerator : MonoBehaviour
 {
 
     static public RoadGenerator instance;
+    Animator animator;
 
     public GameObject RoadPrefab;
     private List<GameObject> roads = new List<GameObject>();
     public float maxSpeed = 10;
     public float speed = 0;
-    public int maxRoadCount = 5;
+    public int maxRoadCount = 10;
+    bool keyPress = false;
 
 
     private void Awake()
@@ -21,11 +23,11 @@ public class RoadGenerator : MonoBehaviour
 
     void Start()
     {
+        speed = maxSpeed;
         ResetLevel();
-        StartLevel();
+        //StartLevel();
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (speed == 0) return;
@@ -48,7 +50,7 @@ public class RoadGenerator : MonoBehaviour
         Vector3 pos = Vector3.zero;
         if (roads.Count > 0)
         {
-            pos = roads[roads.Count - 1].transform.position + new Vector3(0, 0, 15);
+            pos = roads[roads.Count - 1].transform.position + new Vector3(0, 0, 10);
         }
         GameObject go = Instantiate(RoadPrefab, pos, Quaternion.identity);
         go.transform.SetParent(transform);
@@ -58,11 +60,12 @@ public class RoadGenerator : MonoBehaviour
     public void StartLevel()
     {
         speed = maxSpeed;
+        // GameManager.instance.StartGame();
     }
 
     public void ResetLevel()
     {
-        speed = 0;
+        //speed = 0;
         while (roads.Count > 0)
         {
             Destroy(roads[0]);
@@ -72,9 +75,32 @@ public class RoadGenerator : MonoBehaviour
         {
             CreateNextRoad();
         }
-
+        GameManager.instance.StartGame();
         MapGenerator.instance.ResetMaps();
 
     }
+
+    public void PauseLevel()
+    {
+        if (true)
+        { 
+        
+            if (keyPress == false)
+             {
+                keyPress = true;
+                speed = 0;
+                Time.timeScale = 0f;
+                Debug.Log("pause");
+            }
+            else if (keyPress == true)
+            {
+                Debug.Log("NOT pause");
+                speed = maxSpeed;
+                Time.timeScale = 1f;
+                keyPress = false;
+            }
+        } 
+    }
+        
 
 }
